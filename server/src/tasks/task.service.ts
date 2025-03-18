@@ -27,7 +27,25 @@ export class TasksService {
     }
 
     async findAllTask() {
-        return this.taskModel.find().populate('assignee').exec();
+        try {
+
+            const listTask = await this.taskModel.find().populate('assignee').exec();
+            return {
+                status: 200,
+                message: "Task fetched successfully",
+                data: {
+                    task: listTask,
+                },
+            };
+        } catch (error) {
+            console.error("Error fetching users:", error);
+            return {
+                status: 500,
+                message: "Internal Server Error",
+                error: error.message,
+            };
+        }
+
     }
 
 }
