@@ -1,7 +1,9 @@
+import { Cancel01Icon, NoteAddIcon } from 'hugeicons-react';
 import React, { useEffect, useState } from 'react';
 import { toast } from 'react-toastify';
 import { _getTask } from '~/api/task';
 import { _getUsers } from '~/api/user';
+import Button from '~/components/Button';
 import Modal from '~/components/Modal';
 import SelectGroup from '~/components/Selected';
 import axios from '~/config/configAxios';
@@ -152,7 +154,16 @@ const Task = () => {
             <div className="grid grid-cols-3 gap-6 w-full max-w-4xl">
                 {Object.keys(tasks).map((column) => (
                     <div key={column} className="bg-gray-900 p-4 rounded-lg shadow-lg">
-                        <h2 className="text-white text-lg font-semibold">{column}</h2>
+                        <div className="flex items-center justify-between w-full">
+                            <h2 className="text-white text-lg font-semibold">{column}</h2>
+                            <Button
+                                secondary
+                                onClick={toggleCreateModal}
+                                className="mt-0"
+                                icon={<NoteAddIcon size={12} color="#ffffff" variant="stroke" />}
+                            />
+                        </div>
+
                         <div className="mt-3 space-y-2">
                             {tasks[column].map((task) => (
                                 <div
@@ -160,18 +171,13 @@ const Task = () => {
                                     className="bg-gray-700 text-white p-2 rounded-md flex justify-between"
                                 >
                                     <span onClick={() => openModal(task)}>{task.title}</span>
-                                    <button onClick={() => confirmDeleteTask(task)} className="text-red-500">
-                                        ✖
-                                    </button>
+                                    <Button
+                                        onClick={() => confirmDeleteTask(task)}
+                                        icon={<Cancel01Icon size={12} color="#ea0e29" variant="stroke" />}
+                                    />
                                 </div>
                             ))}
                         </div>
-                        <button
-                            onClick={toggleCreateModal}
-                            className="mt-3 text-white bg-gray-600 w-full py-2 rounded hover:bg-gray-500"
-                        >
-                            + Add a card
-                        </button>
                     </div>
                 ))}
             </div>

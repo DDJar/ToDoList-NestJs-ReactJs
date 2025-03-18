@@ -188,7 +188,7 @@ function CreateUser() {
                                 />
                                 <span className="text-error text-xs">{errInput.email}</span>
                             </div>
-                            <div className="">
+                            <div className="w-40">
                                 <label className="mb-2.5 block text-black " htmlFor="role">
                                     Gender
                                 </label>
