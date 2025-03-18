@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, HttpException, Param, Patch, Post, Query, UsePipes, ValidationPipe } from "@nestjs/common";
+import { Body, Controller, Delete, Get, HttpException, Param, Patch, Post, Query, Search, UsePipes, ValidationPipe } from "@nestjs/common";
 import { UsersService } from "./users.service";
 import { CreateUserDto } from "./dto/CreateUser.dto";
 import mongoose from "mongoose";
@@ -17,6 +17,11 @@ export class UsersController {
     getUsers(@Query('tab') currentPage: number) {
         const page = Number(currentPage) || 1;
         return this.usersService.getsUsers(page);
+    }
+    @Get('/search')
+    async searchUser(@Query('tab') currentPage: number, @Query('search') search: string) {
+        const page = Number(currentPage) || 1;
+        return this.usersService.searchUsers(search, page);
     }
     @Get(':id')
     async getUserById(@Param('id') id: string) {

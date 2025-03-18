@@ -4,10 +4,12 @@ import { Model } from "mongoose";
 import { User } from "src/Schema/User.schema";
 import { CreateUserDto } from "./dto/CreateUser.dto";
 import { UpdateUserDto } from "./dto/UpdateUser.dto";
+import { Task } from "src/Schema/Task.schema";
 
 @Injectable()
 export class UsersService {
-    constructor(@InjectModel(User.name) private userModel: Model<User>) { }
+    constructor(@InjectModel(User.name) private userModel: Model<User>,
+        @InjectModel(Task.name) private taskModel: Model<Task>) { }
     async createUser(createUserDto: CreateUserDto) {
         const newUser = new this.userModel(createUserDto);
         return newUser.save();
@@ -19,9 +21,54 @@ export class UsersService {
             const listUsers = await this.userModel
                 .find()
                 .skip(skip)
+                .limit(limit)
+                .lean();
+            const userIds = listUsers.map(user => user._id);
+            const userTasks = await this.taskModel.find({ assignee: { $in: userIds } });
+            const usersWithTasks = listUsers.map(user => ({
+                ...user,
+                tasks: userTasks.filter(task => task.assignee.toString() === user._id.toString())
+            }));
+            const totalUsers = await this.userModel.countDocuments();
+            const totalPages = Math.ceil(totalUsers / limit);
+            return {
+                status: 200,
+                message: "Users fetched successfully",
+                data: {
+                    users: usersWithTasks,
+                    totalPages: totalPages,
+                    currentPage: page,
+                },
+            };
+        } catch (error) {
+            console.error("Error fetching users:", error);
+            return {
+                status: 500,
+                message: "Internal Server Error",
+                error: error.message,
+            };
+        }
+    }
+    async searchUsers(search: string, page: number, limit = 5) {
+        try {
+            const skip = (page - 1) * limit;
+            let searchCondition = {};
+            if (search) {
+                searchCondition = search
+                    ? {
+                        $or: [
+                            { full_name: new RegExp(search, 'i') },
+                            { email: new RegExp(search, 'i') },
+                        ],
+                    }
+                    : {};
+            }
+            const listUsers = await this.userModel
+                .find(searchCondition)
+                .skip(skip)
                 .limit(limit);
 
-            const totalUsers = await this.userModel.countDocuments();
+            const totalUsers = await this.userModel.countDocuments(searchCondition);
             const totalPages = Math.ceil(totalUsers / limit);
             return {
                 status: 200,
@@ -44,10 +91,75 @@ export class UsersService {
     getsUserById(id: string) {
         return this.userModel.findById(id);
     }
-    updateUser(id: string, updateUserDto: UpdateUserDto) {
-        return this.userModel.findByIdAndUpdate(id, updateUserDto, { new: true });
+    async updateUser(id: string, updateUserDto: UpdateUserDto) {
+        try {
+            if (updateUserDto.email) {
+                const existingUser = await this.userModel.findOne({
+                    email: updateUserDto.email,
+                    _id: { $ne: id },
+                });
+
+                if (existingUser) {
+                    return {
+                        status: 400,
+                        message: "Email already exists in the system",
+                    };
+                }
+            }
+
+            const result = await this.userModel.findByIdAndUpdate(id, updateUserDto, { new: true });
+            return {
+                status: 200,
+                message: "Users fetched successfully",
+                data: {
+                    users: result
+                },
+            };
+        } catch (error) {
+            console.error("Error fetching users:", error);
+            return {
+                status: 500,
+                message: "Internal Server Error",
+                error: error.message,
+            };
+        }
+
     }
-    deleteUserById(id: string) {
-        return this.userModel.findByIdAndDelete(id)
+    async deleteUserById(id: string) {
+        try {
+            const user = await this.userModel.findById(id);
+            if (!user) {
+                return {
+                    status: 404,
+                    message: "User not found",
+                };
+            }
+            const taskCount = await this.taskModel.countDocuments({ assignee: id });
+            if (taskCount > 0) {
+                return {
+                    status: 400,
+                    message: "User still has tasks",
+                };
+            }
+            const result = await this.userModel.findByIdAndDelete(id);
+            if (!result) {
+                return {
+                    status: 404,
+                    message: "User not found",
+                };
+            }
+            return {
+                status: 200,
+                message: "Delete users successfully",
+            };
+        } catch (error) {
+            console.error("Error deleting user:", error);
+            return {
+                status: 500,
+                message: "Internal Server Error",
+                error: error.message,
+            };
+        }
+
     }
 }

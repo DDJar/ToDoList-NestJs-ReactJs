@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import SidebarLinkGroup from './SidebarLinkGroup';
-import { ArrowDown01Icon, UserIcon } from 'hugeicons-react';
+import { ArrowDown01Icon, Task01Icon, UserIcon } from 'hugeicons-react';
 
 const Sidebar = ({ sidebarOpen }) => {
     const location = useLocation();
@@ -49,7 +49,7 @@ const Sidebar = ({ sidebarOpen }) => {
                                                     }}
                                                 >
                                                     <UserIcon className="size-6" />
-                                                    User Management
+                                                    User
                                                     <ArrowDown01Icon
                                                         className={`absolute size-6 right-4 top-1/2 -translate-y-1/2 fill-current ${
                                                             open && 'rotate-180'
@@ -69,7 +69,7 @@ const Sidebar = ({ sidebarOpen }) => {
                                                                     (isActive && '!text-white')
                                                                 }
                                                             >
-                                                                Danh sách người dùng
+                                                                User management
                                                             </NavLink>
                                                         </li>
                                                         <li>
@@ -80,7 +80,57 @@ const Sidebar = ({ sidebarOpen }) => {
                                                                     (isActive && '!text-white')
                                                                 }
                                                             >
-                                                                Tạo người dùng
+                                                                Create user
+                                                            </NavLink>
+                                                        </li>
+                                                    </ul>
+                                                </div>
+                                                {/* <!-- Dropdown Menu End --> */}
+                                            </React.Fragment>
+                                        );
+                                    }}
+                                </SidebarLinkGroup>
+                            </>
+                            <>
+                                <SidebarLinkGroup
+                                    activeCondition={pathname === '/' || pathname.includes('dashboard/users')}
+                                >
+                                    {(handleClick, open) => {
+                                        return (
+                                            <React.Fragment>
+                                                <NavLink
+                                                    to="#"
+                                                    className={`group relative flex items-center gap-2.5 rounded-sm px-4 py-2 font-medium text-bodydark1 duration-300 ease-in-out hover:bg-graydark ${
+                                                        (pathname === '/' || pathname.includes('dashboard/users')) &&
+                                                        'bg-graydark '
+                                                    }`}
+                                                    onClick={(e) => {
+                                                        e.preventDefault();
+                                                        sidebarExpanded ? handleClick() : setSidebarExpanded(true);
+                                                    }}
+                                                >
+                                                    <Task01Icon className="size-6" />
+                                                    Task
+                                                    <ArrowDown01Icon
+                                                        className={`absolute size-6 right-4 top-1/2 -translate-y-1/2 fill-current ${
+                                                            open && 'rotate-180'
+                                                        }`}
+                                                    />
+                                                </NavLink>
+                                                {/* <!-- Dropdown Menu Start --> */}
+                                                <div
+                                                    className={`translate transform overflow-hidden ${!open && 'hidden'}`}
+                                                >
+                                                    <ul className="mt-4 mb-5.5 flex flex-col gap-2.5 pl-6">
+                                                        <li>
+                                                            <NavLink
+                                                                to="/dashboards/task/view"
+                                                                className={({ isActive }) =>
+                                                                    'group relative flex items-center gap-2.5 rounded-md px-4 font-medium text-bodydark2 duration-300 ease-in-out hover:text-white ' +
+                                                                    (isActive && '!text-white')
+                                                                }
+                                                            >
+                                                                Task management
                                                             </NavLink>
                                                         </li>
                                                     </ul>

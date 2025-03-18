@@ -1,15 +1,20 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { PencilEdit02Icon } from 'hugeicons-react';
+import { Delete01Icon, PencilEdit02Icon } from 'hugeicons-react';
 import Button from '~/components/Button';
 import axios from '~/config/configAxios';
-import { _getUsers } from '~/api/user';
+import { _getUsers, deleteUsers, searchUsers, updateUsers } from '~/api/user';
 import { toast } from 'react-toastify';
-// import Modal from '~/components/Modal';
-// import SelectGroup from '~/components/Selected';
+
 import useDebounce from '~/utils/useDebounce';
 import { renderEmptyRows } from '~/utils/form';
+import UserUpdateModal from './UserModal';
+import Modal from '~/components/Modal';
 const UserPage = () => {
+    const Gender = [
+        { value: 'true', title: 'Male' },
+        { value: 'false', title: 'Female' },
+    ];
     const [users, setUsers] = useState([]);
     const [searchTerm, setSearchTerm] = useState('');
     const location = useLocation();
@@ -19,16 +24,18 @@ const UserPage = () => {
     const tab = queryParams.get('tab') ? parseInt(queryParams.get('tab')) : 1;
     const [currentPage, setCurrentPage] = useState(tab);
     const [totalPages, setTotalPages] = useState(1);
-    // const [selectedUser, setSelectedUser] = useState(null);
-    // const [showModal, setShowModal] = useState(false);
+    const [selectedUser, setSelectedUser] = useState(null);
+    const [selectedGender, setSelectedGender] = useState('');
+    const [selectedDeleteUser, setSelectedDeleteUser] = useState(null);
+    const [showModal, setShowModal] = useState(false);
+    const [showDeleteModal, setShowDeleteModal] = useState(false);
     const debouncedValue = useDebounce(searchTerm.trim(), 500);
-    // const [errors, setErrors] = useState({
-    //     fullName: '',
-    //     username: '',
-    //     email: '',
-    //     gender: '',
-    //     dob: '',
-    // });
+    const [errors, setErrors] = useState({
+        full_name: '',
+        email: '',
+        gender: '',
+        dob: '',
+    });
 
     useEffect(() => {
         if (debouncedValue && debouncedValue.trim() !== '') {
@@ -53,8 +60,6 @@ const UserPage = () => {
                 params: data,
                 withCredentials: true,
             });
-            console.log(res);
-
             if (res.data.status === 200) {
                 setUsers(res.data.data.users);
                 setTotalPages(res.data.data.totalPages);
@@ -72,7 +77,6 @@ const UserPage = () => {
     const fetchSearchData = async () => {
         let mounted = true;
         const data = {
-            role: role,
             tab: currentPage,
             search: debouncedValue,
         };
@@ -105,46 +109,46 @@ const UserPage = () => {
         };
     };
 
-    // const validation = (value) => {
-    //     return (
-    //         /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value) ||
-    //         /^(09|03|07|08|05)\d{8}$/.test(value) ||
-    //         /^[A-Za-zÀÁÂÃÈÉÊÌÍÎÏÒÓÔÕÙÚĂĐĨŨƠàáâãèéêìíîïòóôõùúăđĩũơƯĂẠ-ỹ\s'-]+$/i.test(value)
-    //     );
-    // };
-    // const validationPhone = (value) => {
-    //     return /^(09|03|07|08|05)\d{8}$/.test(value);
-    // };
-    // const handleInputChange = (field, value) => {
-    //     setSelectedUser({ ...selectedUser, [field]: value });
-    //     switch (field) {
-    //         case 'username':
-    //             setErrors({
-    //                 ...errors,
-    //                 username: value ? '' : 'Tên người dùng không được để trống!',
-    //             });
-    //             break;
-    //         case 'email':
-    //             setErrors({
-    //                 ...errors,
-    //                 email: validation(value) || selectedUser.email ? '' : 'Email không hợp lệ!',
-    //             });
-    //             break;
+    const validation = (value) => {
+        return (
+            /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value) ||
+            /^(09|03|07|08|05)\d{8}$/.test(value) ||
+            /^[A-Za-zÀÁÂÃÈÉÊÌÍÎÏÒÓÔÕÙÚĂĐĨŨƠàáâãèéêìíîïòóôõùúăđĩũơƯĂẠ-ỹ\s'-]+$/i.test(value)
+        );
+    };
 
-    //         case 'phone':
-    //             setErrors({
-    //                 ...errors,
-    //                 phone:
-    //                     value.length < 10 || !validationPhone(value) || !selectedUser.phone
-    //                         ? 'Số điện thoại không hợp lệ! (Phải có đủ 10 chữ số)'
-    //                         : '',
-    //             });
-    //             break;
+    const handleInputChange = (field, value) => {
+        setSelectedUser({ ...selectedUser, [field]: value });
+        const _max = new Date().getFullYear();
+        switch (field) {
+            case 'full_name':
+                setErrors({
+                    ...errors,
+                    full_name: value ? '' : 'Username cannot be empty!',
+                });
+                break;
+            case 'email':
+                setErrors({
+                    ...errors,
+                    email:
+                        (value ? '' : 'Email cannot be empty!') ||
+                        (validation(value) || searchUsers.email ? '' : 'Invalid email!'),
+                });
+                break;
 
-    //         default:
-    //             break;
-    //     }
-    // };
+            case 'dob':
+                setErrors({
+                    ...errors,
+                    dob:
+                        (value ? '' : 'Year cannot be empty!') ||
+                        (value > _max ? `Year must be less than or equal to ${_max}` : ''),
+                });
+                break;
+
+            default:
+                break;
+        }
+    };
     const handlePageChange = async (newPage) => {
         if (newPage >= 1 && newPage <= totalPages) {
             setCurrentPage(newPage);
@@ -152,68 +156,97 @@ const UserPage = () => {
         }
     };
 
-    // const toggleModal = () => {
-    //     setShowModal(!showModal);
-    //     setErrors('');
-    // };
-    // const handleShowAlert = async () => {
-    //     const hasErrors = Object.values(errors).some((error) => error !== '');
-    //     const isMissingDetail =
-    //         !selectedUser.fullName ||
-    //         !selectedUser.username ||
-    //         !selectedUser.email ||
-    //         !selectedUser.gender ||
-    //         !selectedUser.dob;
-    //     if (hasErrors || isMissingDetail) {
-    //         toast.warning('Vui lòng điền đầy đủ thông tin.');
-    //         return;
-    //     }
+    const toggleModal = () => {
+        setShowModal(!showModal);
+        setErrors('');
+    };
+    const toggleDeleteModal = () => {
+        setShowDeleteModal(!showDeleteModal);
+    };
+    const handleShowAlert = async () => {
+        const hasErrors = Object.values(errors).some((error) => error !== '');
+        const isMissingDetail = !selectedUser.full_name || !selectedUser.email || !selectedUser.dob;
+        console.log(selectedUser);
 
-    //     try {
-    //         const data = {
-    //             fullName: selectedUser.fullName,
-    //             email: selectedUser.email,
-    //             username: selectedUser.username,
-    //             gender: selectedUser.gender,
-    //             dob: selectedUser.dob,
+        if (hasErrors || isMissingDetail) {
+            toast.warning('Please fill in all information.');
+            return;
+        }
 
-    //         };
-    //         const res = await axios({
-    //             method: updateUsers.method,
-    //             url: `${updateUsers.url}/${selectedUser._id}`,
-    //             data: data,
-    //             withCredentials: true,
-    //         });
-    //         console.log(res.data);
-    //         if (res.data.status === 200) {
-    //             setCurrentPage(tab);
-    //             toast.success('Cập nhật thành công', {
-    //                 autoClose: 3000,
-    //                 closeOnClick: true,
-    //             });
-    //             fetchData();
-    //             toggleModal();
-    //             setSelectedRole('');
-    //         } else if (res.data.status === 400 && res.data.message === 'Duplicate username') {
-    //             toast.warning('Tên người dùng đã tồn tại.Vui lòng chọn tên khác');
-    //         } else if (res.data.status === 400 && res.data.message === 'Duplicate email.') {
-    //             toast.warning('Email đã tồn tại.Vui lòng chọn email.');
-    //         } else if (res.data.status === 400 && res.data.message === 'Duplicate phone.') {
-    //             toast.warning('Số điện thoại đã tồn tại.Vui lòng chọn số khác.');
-    //         }
-    //     } catch (error) {
-    //         toast.error(`Cập nhật thất bại`, {
-    //             render: `${error.message}`,
-    //             isLoading: false,
-    //             autoClose: 3000,
-    //             closeOnClick: true,
-    //         });
-    //     }
-    // };
-    // const handleOpenModal = (userItem) => {
-    //     toggleModal();
-    //     setSelectedUser(userItem);
-    // };
+        try {
+            const data = {
+                full_name: selectedUser.full_name,
+                email: selectedUser.email,
+                gender: selectedGender,
+                dob: selectedUser.dob,
+            };
+            console.log(data);
+
+            const res = await axios({
+                method: updateUsers.method,
+                url: `${updateUsers.url}${selectedUser._id}`,
+                data: data,
+                withCredentials: true,
+            });
+            if (res.data.status === 200) {
+                setCurrentPage(tab);
+                toast.success('Update successfull', {
+                    autoClose: 3000,
+                    closeOnClick: true,
+                });
+                fetchData();
+                toggleModal();
+                setSelectedGender('');
+            } else if (res.data.status === 400 && res.data.message === 'Email already exists in the system') {
+                toast.warning('Email already exists');
+            }
+        } catch (error) {
+            toast.error(`Delete false`, {
+                render: `${error.message}`,
+                isLoading: false,
+                autoClose: 3000,
+                closeOnClick: true,
+            });
+        }
+    };
+    const handleShowDeleteAlert = async () => {
+        try {
+            const res = await axios({
+                method: deleteUsers.method,
+                url: `${deleteUsers.url}${selectedDeleteUser._id}`,
+                withCredentials: true,
+            });
+            console.log(res);
+
+            if (res.data.status === 200) {
+                setCurrentPage(tab);
+                toast.success('Delete successfull', {
+                    autoClose: 3000,
+                    closeOnClick: true,
+                });
+                fetchData();
+                toggleDeleteModal();
+            } else if (res.data.status === 400 && res.data.message === 'User still has tasks') {
+                toast.warning('User still has tasks');
+            }
+        } catch (error) {
+            toast.error(`Delete false`, {
+                render: `${error.message}`,
+                isLoading: false,
+                autoClose: 3000,
+                closeOnClick: true,
+            });
+        }
+    };
+    const handleOpenModal = (userItem) => {
+        toggleModal();
+        setSelectedUser(userItem);
+        setSelectedGender(userItem.gender ? 'true' : 'false');
+    };
+    const handleOpenDeleteModal = (userItem) => {
+        toggleDeleteModal();
+        setSelectedDeleteUser(userItem);
+    };
     return (
         <div>
             <h1>User Management</h1>
@@ -223,7 +256,7 @@ const UserPage = () => {
                     <div className="flex">
                         <div className="m-3 flex flex-col sm:flex-row flex-wrap space-y-4 sm:space-y-0 items-center justify-between pb-4">
                             <label htmlFor="table-search" className="sr-only">
-                                Tìm kiếm
+                                Search
                             </label>
                             <div className="relative">
                                 <div className="absolute inset-y-0 left-0 flex items-center ps-3 pointer-events-none">
@@ -245,9 +278,9 @@ const UserPage = () => {
                                     type="text"
                                     id="table-search"
                                     className="block p-2 ps-10 text-sm text-gray-900 border border-gray-300 rounded-lg w-80 bg-gray-50 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
-                                    placeholder="Nhập vào ô tìm kiếm..."
-                                    // value={searchTerm}
-                                    // onChange={(e) => setSearchTerm(e.target.value)}
+                                    placeholder="Enter box search..."
+                                    value={searchTerm}
+                                    onChange={(e) => setSearchTerm(e.target.value)}
                                 />
                             </div>
                         </div>
@@ -283,12 +316,12 @@ const UserPage = () => {
                                     >
                                         <td className="px-6 py-4  text-center">{index + 1 + (currentPage - 1) * 5}</td>
                                         <td className="px-6 py-4 text-wrap">{user.full_name}</td>
-                                        <td className="px-6 py-4">{user.username}</td>
-                                        <td className="px-6 py-4">{user.email}</td>
-                                        <td className="px-6 py-4">{user.gender ? 'Male' : 'Female'}</td>
-                                        <td className="px-6 py-4">{user.dob}</td>
-
-                                        <td className="px-6 py-4">
+                                        <td className="px-6 py-4 text-center">{user.username}</td>
+                                        <td className="px-6 py-4 text-center">{user.email}</td>
+                                        <td className="px-6 py-4 text-center">{user.gender ? 'Male' : 'Female'}</td>
+                                        <td className="px-6 py-4 text-center">{user.dob}</td>
+                                        <td className="px-6 py-4 text-center">{user.tasks?.length}</td>
+                                        <td className="px-3 py-4 text-center">
                                             <div className="flex">
                                                 <>
                                                     <Button
@@ -299,17 +332,44 @@ const UserPage = () => {
                                                                 size={24}
                                                                 color={'#223dec'}
                                                                 variant={'stroke'}
-                                                                // onClick={() => handleOpenModal(user)}
+                                                                onClick={() => handleOpenModal(user)}
                                                             />
                                                         }
                                                     />
+                                                    {user.tasks?.length == 0 ? (
+                                                        <Button
+                                                            outlineInfo
+                                                            className="mr-3"
+                                                            onClick={() => handleOpenDeleteModal(user)}
+                                                            icon={
+                                                                <Delete01Icon
+                                                                    size={24}
+                                                                    color="#ee2139"
+                                                                    variant="stroke"
+                                                                />
+                                                            }
+                                                        />
+                                                    ) : (
+                                                        <Button
+                                                            outlineInfo
+                                                            disabled={true}
+                                                            className="mr-3"
+                                                            icon={
+                                                                <Delete01Icon
+                                                                    size={24}
+                                                                    color="#9b9b9b"
+                                                                    variant="stroke"
+                                                                />
+                                                            }
+                                                        />
+                                                    )}
                                                 </>
                                             </div>
                                         </td>
                                     </tr>
                                 ))
                             )}
-                            {users.length > 0 && renderEmptyRows(5, users.length, 6)}
+                            {users.length > 0 && renderEmptyRows(5, users.length, 7)}
                         </tbody>
                     </table>
                     <div className="justify-center flex mb-4">
@@ -334,6 +394,33 @@ const UserPage = () => {
                         </div>
                     </div>
                 </div>
+                <UserUpdateModal
+                    showModal={showModal}
+                    toggleModal={toggleModal}
+                    handleShowAlert={handleShowAlert}
+                    selectedUser={selectedUser}
+                    handleInputChange={handleInputChange}
+                    errors={errors}
+                    gender={Gender}
+                    selectedGender={selectedGender}
+                    setSelectedGender={setSelectedGender}
+                />
+                <Modal
+                    title={'Confirm delete user'}
+                    _showModal={showDeleteModal}
+                    onClick={toggleDeleteModal}
+                    onClickAccept={handleShowDeleteAlert}
+                >
+                    {selectedDeleteUser ? (
+                        <form>
+                            <div className="grid gap-2">
+                                <h2>Are you sure you want to delete the user {selectedDeleteUser.full_name}?</h2>
+                            </div>
+                        </form>
+                    ) : (
+                        <></>
+                    )}
+                </Modal>
             </div>
         </div>
     );

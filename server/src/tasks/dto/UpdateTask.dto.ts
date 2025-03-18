@@ -1,8 +1,10 @@
 import { Type } from "class-transformer";
 import { IsBoolean, IsEmail, IsEnum, IsNotEmpty, IsOptional, IsString, MaxLength, ValidateNested } from "class-validator";
-export class CreateTaskDto {
+
+export class UpdateTaskDto {
+    @IsOptional()
     @IsString()
-    title: string;
+    title?: string;
 
     @IsOptional()
     @IsString()
