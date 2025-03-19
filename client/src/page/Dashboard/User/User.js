@@ -309,6 +309,7 @@ const UserPage = () => {
                                         key={user._id}
                                         className="bg-white border-b dark:bg-gray-800 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600"
                                     >
+                                        {console.log(user._id)}
                                         <td className="px-6 py-4  text-center">{index + 1 + (currentPage - 1) * 5}</td>
                                         <td className="px-6 py-4 text-wrap">{user.full_name}</td>
                                         <td className="px-6 py-4 text-center">{user.username}</td>

@@ -1,9 +1,9 @@
 import { HttpException, Injectable } from "@nestjs/common";
 import { InjectModel } from "@nestjs/mongoose";
 import mongoose, { Model } from "mongoose";
-import { Task } from "src/Schema/Task.schema";
+import { Task } from "src/schema/Task.schema";
 import { CreateTaskDto } from "./dto/CreateTask.dto";
-import { User } from "src/Schema/User.schema";
+import { User } from "src/schema/User.schema";
 import { UpdateTaskDto } from "./dto/UpdateTask.dto";
 
 

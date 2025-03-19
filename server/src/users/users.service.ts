@@ -1,10 +1,10 @@
 import { Injectable } from "@nestjs/common";
 import { InjectModel } from "@nestjs/mongoose";
 import { Model } from "mongoose";
-import { User } from "src/Schema/User.schema";
+import { User } from "src/schema/User.schema";
 import { CreateUserDto } from "./dto/CreateUser.dto";
 import { UpdateUserDto } from "./dto/UpdateUser.dto";
-import { Task } from "src/Schema/Task.schema";
+import { Task } from "src/schema/Task.schema";
 
 @Injectable()
 export class UsersService {
@@ -81,7 +81,7 @@ export class UsersService {
         try {
 
             const listUsers = await this.userModel
-                .find()
+                .find().select("_id full_name")
                 .lean();
             return {
                 status: 200,
@@ -102,29 +102,35 @@ export class UsersService {
     async searchUsers(search: string, page: number, limit = 5) {
         try {
             const skip = (page - 1) * limit;
-            let searchCondition = {};
-            if (search) {
-                searchCondition = search
-                    ? {
-                        $or: [
-                            { full_name: new RegExp(search, 'i') },
-                            { email: new RegExp(search, 'i') },
-                        ],
-                    }
-                    : {};
-            }
+            const searchCondition = search
+                ? {
+                    $or: [
+                        { full_name: new RegExp(search, 'i') },
+                        { email: new RegExp(search, 'i') },
+                    ],
+                }
+                : {};
             const listUsers = await this.userModel
-                .find(searchCondition)
+                .find(searchCondition || {})
                 .skip(skip)
-                .limit(limit);
+                .limit(limit)
+                .lean();
 
+            const userIds = listUsers.map(user => user._id.toString());
+            const userTasks = await this.taskModel.find({ assignee: { $in: userIds } });
+            const usersWithTasks = listUsers.map(user => ({
+                ...user,
+                _id: user._id.toString(),
+                tasks: userTasks.filter(task => task.assignee.toString() === user._id.toString()),
+            }));
             const totalUsers = await this.userModel.countDocuments(searchCondition);
             const totalPages = Math.ceil(totalUsers / limit);
+
             return {
                 status: 200,
                 message: "Users fetched successfully",
                 data: {
-                    users: listUsers,
+                    users: usersWithTasks,
                     totalPages: totalPages,
                     currentPage: page,
                 },
@@ -138,6 +144,7 @@ export class UsersService {
             };
         }
     }
+
     getsUserById(id: string) {
         return this.userModel.findById(id);
     }

@@ -1,13 +1,12 @@
-import { Cancel01Icon, NoteAddIcon } from 'hugeicons-react';
 import React, { useEffect, useState } from 'react';
 import { toast } from 'react-toastify';
 import { _createTasks, _deleteTasks, _getTask, _updateTasks } from '~/api/task';
 import { _getAllUsers } from '~/api/user';
-import Button from '~/components/Button';
 import Modal from '~/components/Modal';
 import SelectGroup from '~/components/Selected';
 import axios from '~/config/configAxios';
 import { validateInputRequire } from '~/utils/validate';
+import Column from './Column';
 
 const Task = () => {
     const [tasks, setTasks] = useState({
@@ -35,6 +34,7 @@ const Task = () => {
     });
     useEffect(() => {
         fetchTasks();
+        fetchData();
     }, []);
     useEffect(() => {
         if (users) {
@@ -45,9 +45,6 @@ const Task = () => {
             setSelectedUser(_userSelect);
         }
     }, [users]);
-    useEffect(() => {
-        fetchData();
-    }, [location.pathname]);
     const fetchTasks = async () => {
         try {
             const res = await axios({
@@ -186,7 +183,7 @@ const Task = () => {
             assignee: selectedOptionUser || '',
             status: selectedStatus,
         };
-        const id = toast.loading('Creating task...');
+        const id = toast.loading('Updating task...');
         try {
             const res = await axios({
                 method: _updateTasks.method,
@@ -238,7 +235,9 @@ const Task = () => {
         });
         setSelectedStatus(task.status);
         const assignedUser = users.find((user) => user._id === task.assignee?._id);
-        setSelectedOptionUser(assignedUser ? assignedUser.value : '');
+        console.log(assignedUser);
+
+        setSelectedOptionUser(assignedUser ? assignedUser._id : '');
         setShowCreateModal(true);
     };
 
@@ -272,43 +271,101 @@ const Task = () => {
             });
         }
     };
+    const handleDrop = async (task, newStatus) => {
+        if (task.status === newStatus) return;
+        console.log(task);
+
+        const updatedTask = { ...task, assignee: task.assignee?._id, status: newStatus };
+        const id = toast.loading('Updating task...');
+
+        try {
+            const res = await axios({
+                method: _updateTasks.method,
+                url: `${_updateTasks.url}${updatedTask._id}`,
+                data: updatedTask,
+                withCredentials: true,
+            });
+
+            if (res.data.status === 200) {
+                toast.update(id, {
+                    render: 'Update success',
+                    type: 'success',
+                    isLoading: false,
+                    autoClose: 3000,
+                    closeOnClick: true,
+                    closeButton: true,
+                });
+
+                fetchTasks();
+            } else {
+                toast.update(id, {
+                    render: `Task update failed!`,
+                    type: 'error',
+                    isLoading: false,
+                    autoClose: 3000,
+                    closeOnClick: true,
+                    closeButton: true,
+                });
+            }
+        } catch (error) {
+            toast.update(id, {
+                render: `Failed to update task: ${error.message}`,
+                type: 'error',
+                isLoading: false,
+                autoClose: 3000,
+                closeOnClick: true,
+                closeButton: true,
+            });
+        }
+    };
+
+    const moveTask = (columnStatus, fromIndex, toIndex) => {
+        setTasks((prevTasks) => {
+            const updatedColumn = [...prevTasks[columnStatus]]; // Copy danh sách task của cột hiện tại
+            const [movedTask] = updatedColumn.splice(fromIndex, 1); // Lấy task bị kéo ra khỏi danh sách
+            updatedColumn.splice(toIndex, 0, movedTask); // Chèn lại task vào vị trí mới
+
+            return { ...prevTasks, [columnStatus]: updatedColumn }; // Cập nhật state tasks
+        });
+    };
+    const moveTaskBetweenColumns = (taskId, fromStatus, toStatus) => {
+        setTasks((prevTasks) => {
+            const task = prevTasks[fromStatus].find((t) => t._id === taskId);
+            if (!task) return prevTasks;
+
+            const updatedFromColumn = prevTasks[fromStatus].filter((t) => t._id !== taskId);
+            const updatedToColumn = [...prevTasks[toStatus], { ...task, status: toStatus, assignee: task.assignee }];
+
+            return {
+                ...prevTasks,
+                [fromStatus]: updatedFromColumn,
+                [toStatus]: updatedToColumn,
+            };
+        });
+
+        const movedTask = tasks[fromStatus].find((t) => t._id === taskId);
+        console.log(movedTask);
+
+        if (movedTask) {
+            handleDrop({ ...movedTask, assignee: movedTask.assignee }, toStatus);
+        }
+    };
 
     return (
         <div className="min-h-screen p-8 flex justify-center items-start bg-gray-100">
             <div className="grid grid-cols-3 gap-6 w-full max-w-4xl">
-                {Object.keys(tasks).map((column) => (
-                    <div key={column} className="bg-gray-900 p-4 rounded-lg shadow-lg">
-                        <div className="flex items-center justify-between w-full">
-                            <h2 className="text-white text-lg font-semibold">{column}</h2>
-                            <Button
-                                secondary
-                                onClick={() => toggleCreateModal(column)}
-                                className="mt-0"
-                                icon={<NoteAddIcon size={12} color="#ffffff" variant="stroke" />}
-                            />
-                        </div>
-
-                        <div className="mt-3 space-y-2">
-                            {tasks[column].map((task) => (
-                                <div
-                                    key={task._id}
-                                    className="bg-gray-700 text-white p-2 rounded-md flex items-center justify-between"
-                                >
-                                    <span
-                                        className="w-full truncate"
-                                        onClick={() => openModal(task)}
-                                        title={task.title}
-                                    >
-                                        {task.title}
-                                    </span>
-                                    <Button
-                                        onClick={() => confirmDeleteTask(task)}
-                                        icon={<Cancel01Icon size={12} color="#ea0e29" variant="stroke" />}
-                                    />
-                                </div>
-                            ))}
-                        </div>
-                    </div>
+                {['Todo', 'Doing', 'Done'].map((status) => (
+                    <Column
+                        key={status}
+                        status={status}
+                        tasks={tasks}
+                        setTasks={setTasks}
+                        moveTask={moveTask}
+                        toggleCreateModal={toggleCreateModal}
+                        openModal={openModal}
+                        moveTaskBetweenColumns={moveTaskBetweenColumns}
+                        confirmDeleteTask={confirmDeleteTask}
+                    />
                 ))}
             </div>
 
