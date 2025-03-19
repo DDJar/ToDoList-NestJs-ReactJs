@@ -18,6 +18,10 @@ export class UsersController {
         const page = Number(currentPage) || 1;
         return this.usersService.getsUsers(page);
     }
+    @Get('/view-all')
+    getAllUsers() {
+        return this.usersService.getsAllUsers();
+    }
     @Get('/search')
     async searchUser(@Query('tab') currentPage: number, @Query('search') search: string) {
         const page = Number(currentPage) || 1;
@@ -25,8 +29,6 @@ export class UsersController {
     }
     @Get(':id')
     async getUserById(@Param('id') id: string) {
-        const isValidId = mongoose.Types.ObjectId.isValid(id);
-        if (!isValidId) throw new HttpException("Invalid ID", 400);
         const findUser = await this.usersService.getsUserById(id);
         if (!findUser) throw new HttpException("User Not Found", 404);
         return findUser;
@@ -35,7 +37,13 @@ export class UsersController {
     @UsePipes(new ValidationPipe())
     async updateUser(@Param('id') id: string, @Body() updateUserDto: UpdateUserDto,) {
         const isValidId = mongoose.Types.ObjectId.isValid(id);
-        if (!isValidId) throw new HttpException("Invalid ID", 400);
+        if (!isValidId) {
+            return {
+                status: 400,
+                message: "Invalid ID",
+
+            };
+        }
         const updateUser = await this.usersService.updateUser(id, updateUserDto);
         if (!updateUser) throw new HttpException("User Not Found", 404);
         return updateUser;

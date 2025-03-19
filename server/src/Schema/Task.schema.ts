@@ -9,10 +9,10 @@ export class Task {
     @Prop()
     description: string;
 
-    @Prop({ enum: ['todo', 'doing', 'done'], default: 'todo' })
+    @Prop({ enum: ['Todo', 'Doing', 'Done'], default: 'Todo' })
     status: string;
 
-    @Prop({ type: mongoose.Schema.Types.ObjectId, ref: 'User' })
+    @Prop({ type: mongoose.Schema.Types.ObjectId, ref: 'User', required: false, default: null })
     assignee: User;
 }
 export const TaskSchema = SchemaFactory.createForClass(Task);

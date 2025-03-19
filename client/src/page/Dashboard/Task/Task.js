@@ -1,12 +1,13 @@
 import { Cancel01Icon, NoteAddIcon } from 'hugeicons-react';
 import React, { useEffect, useState } from 'react';
 import { toast } from 'react-toastify';
-import { _getTask } from '~/api/task';
-import { _getUsers } from '~/api/user';
+import { _createTasks, _deleteTasks, _getTask, _updateTasks } from '~/api/task';
+import { _getAllUsers } from '~/api/user';
 import Button from '~/components/Button';
 import Modal from '~/components/Modal';
 import SelectGroup from '~/components/Selected';
 import axios from '~/config/configAxios';
+import { validateInputRequire } from '~/utils/validate';
 
 const Task = () => {
     const [tasks, setTasks] = useState({
@@ -18,7 +19,7 @@ const Task = () => {
     const [showCreateModal, setShowCreateModal] = useState(false);
     const [showDeleteModal, setShowDeleteModal] = useState(false);
     const [selectedTask, setSelectedTask] = useState(null);
-    const [taskData, setTaskData] = useState({ title: '', description: '', status: 'Todo' });
+    const [taskData, setTaskData] = useState({ _id: '', title: '', description: '', status: '' });
     const [selectedStatus, setSelectedStatus] = useState('Todo');
     const [selectedUser, setSelectedUser] = useState('');
     const [selectedOptionUser, setSelectedOptionUser] = useState('');
@@ -28,30 +29,11 @@ const Task = () => {
         { value: 'Doing', title: 'Doing' },
         { value: 'Done', title: 'Done' },
     ];
-
+    const [errTaskData, setErrTaskData] = useState({
+        title: '',
+        description: '',
+    });
     useEffect(() => {
-        const fetchTasks = async () => {
-            try {
-                const res = await axios({
-                    method: _getTask.method,
-                    url: _getTask.url,
-                    withCredentials: true,
-                });
-                console.log(res);
-
-                if (res.data.status === 200) {
-                    const groupedTasks = {
-                        Todo: res.data.data.task.filter((task) => task.status === 'Todo'),
-                        Doing: res.data.data.task.filter((task) => task.status === 'Doing'),
-                        Done: res.data.data.task.filter((task) => task.status === 'Done'),
-                    };
-                    setTasks(groupedTasks);
-                }
-            } catch (error) {
-                console.error('Error fetching tasks:', error);
-            }
-        };
-
         fetchTasks();
     }, []);
     useEffect(() => {
@@ -66,18 +48,23 @@ const Task = () => {
     useEffect(() => {
         fetchData();
     }, [location.pathname]);
-    const fetchData = async () => {
+    const fetchTasks = async () => {
         try {
             const res = await axios({
-                method: _getUsers.method,
-                url: _getUsers.url,
+                method: _getTask.method,
+                url: _getTask.url,
                 withCredentials: true,
             });
             if (res.data.status === 200) {
-                setUsers(res.data.data.users);
+                const groupedTasks = {
+                    Todo: res.data.data.task.filter((task) => task.status === 'Todo'),
+                    Doing: res.data.data.task.filter((task) => task.status === 'Doing'),
+                    Done: res.data.data.task.filter((task) => task.status === 'Done'),
+                };
+                setTasks(groupedTasks);
             }
         } catch (error) {
-            toast.error(`Hiển thị thất bại`, {
+            toast.error(`Display failed`, {
                 render: `${error.message}`,
                 isLoading: false,
                 autoClose: 3000,
@@ -85,67 +72,204 @@ const Task = () => {
             });
         }
     };
-    const toggleCreateModal = () => {
+    const fetchData = async () => {
+        try {
+            const res = await axios({
+                method: _getAllUsers.method,
+                url: _getAllUsers.url,
+                withCredentials: true,
+            });
+            if (res.data.status === 200) {
+                setUsers(res.data.data.users);
+            }
+        } catch (error) {
+            toast.error(`Display failed`, {
+                render: `${error.message}`,
+                isLoading: false,
+                autoClose: 3000,
+                closeOnClick: true,
+            });
+        }
+    };
+    const toggleCreateModal = (column) => {
         setShowCreateModal(!showCreateModal);
-        setTaskData({ title: '', description: '', status: 'Todo' });
-        setSelectedStatus('Todo');
+        if (!showCreateModal) {
+            setTaskData({ title: '', description: '', status: column });
+            setSelectedStatus(column);
+            setSelectedOptionUser('');
+            setSelectedTask(null);
+        }
+        setErrTaskData('');
     };
 
-    const handleInputChange = (key, value) => {
-        setTaskData((prev) => ({ ...prev, [key]: value }));
+    const handleInputChange = (field, value) => {
+        let error = '';
+
+        switch (field) {
+            case 'title':
+                error = validateInputRequire(value, 3, 100);
+                break;
+            case 'description':
+                error = validateInputRequire(value, 5, 1000);
+                break;
+            default:
+                break;
+        }
+
+        setTaskData((prev) => ({ ...prev, [field]: value }));
+        setErrTaskData((prev) => ({ ...prev, [field]: error }));
     };
 
     const handleSaveTask = async () => {
+        handleInputChange('title', taskData.title);
+        handleInputChange('description', taskData.description);
+
+        if (!taskData.title || !taskData.description) {
+            toast.warning('Please fill in all required fields correctly!');
+            return;
+        }
+        for (var key in errTaskData) {
+            if (errTaskData[key]) {
+                toast.warning('Please fill in all information.');
+                return;
+            }
+        }
+        const id = toast.loading('Creating task...');
         try {
             const newTask = {
                 ...taskData,
                 assignee: selectedOptionUser || '',
                 status: selectedStatus,
             };
-            console.log(newTask);
+            const res = await axios({
+                method: _createTasks.method,
+                url: _createTasks.url,
+                data: newTask,
+                withCredentials: true,
+            });
 
-            // const res = await axios.post('https://your-api-url.com/tasks', newTask);
-
-            // setTasks((prev) => ({
-            //     ...prev,
-            //     [newTask.status]: [...prev[newTask.status], res.data],
-            // }));
-
-            toggleCreateModal();
+            if (res.data.status === 200) {
+                toast.update(id, {
+                    render: 'Create success',
+                    type: 'success',
+                    isLoading: false,
+                    autoClose: 3000,
+                    closeOnClick: true,
+                    closeButton: true,
+                });
+                fetchTasks();
+                toggleCreateModal();
+            } else {
+                toast.update(id, {
+                    render: `Task creation failed!`,
+                    type: 'error',
+                    isLoading: false,
+                    autoClose: 3000,
+                    closeOnClick: true,
+                    closeButton: true,
+                });
+            }
         } catch (error) {
-            console.error('Error saving task:', error);
+            toast.update(id, {
+                render: `Failed to create task: ${error.message}`,
+                type: 'error',
+                isLoading: false,
+                autoClose: 3000,
+                closeOnClick: true,
+                closeButton: true,
+            });
         }
     };
+    const handleUpdateTask = async () => {
+        const updatedTask = {
+            ...taskData,
+            assignee: selectedOptionUser || '',
+            status: selectedStatus,
+        };
+        const id = toast.loading('Creating task...');
+        try {
+            const res = await axios({
+                method: _updateTasks.method,
+                url: `${_updateTasks.url}${updatedTask._id}`,
+                data: updatedTask,
+                withCredentials: true,
+            });
 
+            if (res.data.status === 200) {
+                toast.update(id, {
+                    render: 'Update success',
+                    type: 'success',
+                    isLoading: false,
+                    autoClose: 3000,
+                    closeOnClick: true,
+                    closeButton: true,
+                });
+
+                fetchTasks();
+                toggleCreateModal();
+            } else {
+                toast.update(id, {
+                    render: `Task update failed!`,
+                    type: 'error',
+                    isLoading: false,
+                    autoClose: 3000,
+                    closeOnClick: true,
+                    closeButton: true,
+                });
+            }
+        } catch (error) {
+            toast.update(id, {
+                render: `Failed to update task: ${error.message}`,
+                type: 'error',
+                isLoading: false,
+                autoClose: 3000,
+                closeOnClick: true,
+                closeButton: true,
+            });
+        }
+    };
     const openModal = (task) => {
         setSelectedTask(task);
         setTaskData({
+            _id: task._id,
             title: task.title,
             description: task.description,
             status: task.status,
         });
-        setSelectedUser(users.find((u) => u.value === task.assignee) || null);
         setSelectedStatus(task.status);
+        const assignedUser = users.find((user) => user._id === task.assignee?._id);
+        setSelectedOptionUser(assignedUser ? assignedUser.value : '');
         setShowCreateModal(true);
     };
 
     const confirmDeleteTask = (task) => {
         setSelectedTask(task);
-        setShowDeleteModal(true);
+        setShowDeleteModal(!showDeleteModal);
     };
 
     const handleDeleteTask = async () => {
         try {
-            await axios.delete(`https://your-api-url.com/tasks/${selectedTask._id}`);
+            const res = await axios({
+                method: _deleteTasks.method,
+                url: `${_deleteTasks.url}${selectedTask._id}`,
+                withCredentials: true,
+            });
 
-            setTasks((prev) => ({
-                ...prev,
-                [selectedTask.status]: prev[selectedTask.status].filter((t) => t._id !== selectedTask._id),
-            }));
-
-            setShowDeleteModal(false);
+            if (res.data.status === 200) {
+                toast.success('Delete successfull', {
+                    autoClose: 3000,
+                    closeOnClick: true,
+                });
+                fetchTasks();
+                confirmDeleteTask();
+            }
         } catch (error) {
-            console.error('Error deleting task:', error);
+            toast.error(`Delete failed`, {
+                render: `${error.message}`,
+                isLoading: false,
+                autoClose: 3000,
+                closeOnClick: true,
+            });
         }
     };
 
@@ -158,7 +282,7 @@ const Task = () => {
                             <h2 className="text-white text-lg font-semibold">{column}</h2>
                             <Button
                                 secondary
-                                onClick={toggleCreateModal}
+                                onClick={() => toggleCreateModal(column)}
                                 className="mt-0"
                                 icon={<NoteAddIcon size={12} color="#ffffff" variant="stroke" />}
                             />
@@ -168,9 +292,15 @@ const Task = () => {
                             {tasks[column].map((task) => (
                                 <div
                                     key={task._id}
-                                    className="bg-gray-700 text-white p-2 rounded-md flex justify-between"
+                                    className="bg-gray-700 text-white p-2 rounded-md flex items-center justify-between"
                                 >
-                                    <span onClick={() => openModal(task)}>{task.title}</span>
+                                    <span
+                                        className="w-full truncate"
+                                        onClick={() => openModal(task)}
+                                        title={task.title}
+                                    >
+                                        {task.title}
+                                    </span>
                                     <Button
                                         onClick={() => confirmDeleteTask(task)}
                                         icon={<Cancel01Icon size={12} color="#ea0e29" variant="stroke" />}
@@ -186,22 +316,25 @@ const Task = () => {
                 title={selectedTask ? 'Edit Task' : 'Add Task'}
                 _showModal={showCreateModal}
                 onClick={toggleCreateModal}
-                onClickAccept={handleSaveTask}
+                onClickAccept={selectedTask ? handleUpdateTask : handleSaveTask}
             >
                 <div className="grid gap-3">
                     <input
                         type="text"
-                        placeholder="Title"
+                        placeholder="Enter title..."
                         className="w-full p-2 border rounded"
                         value={taskData.title}
                         onChange={(e) => handleInputChange('title', e.target.value)}
                     />
+                    <span className="text-error text-xs">{errTaskData.title}</span>
                     <textarea
-                        placeholder="Description"
-                        className="w-full p-2 border rounded"
+                        placeholder="Enter description..."
+                        className="w-full p-2 border rounded resize-y max-h-32"
+                        maxLength={300}
                         value={taskData.description}
                         onChange={(e) => handleInputChange('description', e.target.value)}
                     />
+                    <span className="text-error text-xs">{errTaskData.description}</span>
                     <SelectGroup
                         data={selectedUser}
                         selectedOption={selectedOptionUser}
@@ -218,7 +351,7 @@ const Task = () => {
             <Modal
                 title="Confirm Delete Task"
                 _showModal={showDeleteModal}
-                onClick={toggleCreateModal}
+                onClick={confirmDeleteTask}
                 onClickAccept={handleDeleteTask}
             >
                 {selectedTask && <p>Are you sure you want to delete the task {selectedTask.title}?</p>}

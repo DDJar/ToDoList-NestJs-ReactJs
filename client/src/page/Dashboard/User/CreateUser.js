@@ -3,7 +3,7 @@ import { useState } from 'react';
 import Button from '~/components/Button';
 import SelectGroup from '~/components/Selected';
 import { validateInputRequire, validateRange } from '~/utils/validate';
-import { createUser } from '~/api/user';
+import { _createUser } from '~/api/user';
 import { validateEmail } from '~/utils/validate';
 import { validateBirthYear } from '~/utils/validate';
 import { toast } from 'react-toastify';
@@ -80,13 +80,13 @@ function CreateUser() {
         };
         try {
             const res = await axios({
-                method: createUser.method,
-                url: createUser.url,
+                method: _createUser.method,
+                url: _createUser.url,
                 data: _data,
                 withCredentials: true,
             });
 
-            if (res.status === 201) {
+            if (res.data.status === 200) {
                 toast.update(id, {
                     render: 'Create success',
                     type: 'success',
@@ -95,28 +95,34 @@ function CreateUser() {
                     closeOnClick: true,
                     closeButton: true,
                 });
-            } else if (res.data.status === 400 && res.data.message === 'Valid is required') {
-                toast.update(id, {
-                    render: `Dữ liệu không hợp lệ`,
-                    type: 'error',
-                    isLoading: false,
-                    autoClose: 3000,
-                    closeOnClick: true,
-                    closeButton: true,
+                setDataInput({
+                    full_name: '',
+                    username: '',
+                    email: '',
+                    gender: '',
+                    dob: '',
                 });
-            } else if (res.data.status === 400 && res.data.message === 'Duplicate') {
+                setSelectedOptionGender('');
+                setErrInput({
+                    full_name: '',
+                    username: '',
+                    email: '',
+                    gender: '',
+                    dob: '',
+                });
+            } else if (res.data.status == 400 && res.data.message == 'Email already exists in the system') {
                 toast.update(id, {
-                    render: `Tên xe hoặc biển số xe đã tồn tại!`,
+                    render: `Email already exists!!`,
                     type: 'warning',
                     isLoading: false,
                     autoClose: 3000,
                     closeOnClick: true,
                     closeButton: true,
                 });
-            } else {
+            } else if (res.data.status === 400 && res.data.message === 'Username already exists in the system') {
                 toast.update(id, {
-                    render: `Tạo thất bại`,
-                    type: 'error',
+                    render: `Username already exists!!`,
+                    type: 'warning',
                     isLoading: false,
                     autoClose: 3000,
                     closeOnClick: true,
@@ -124,8 +130,9 @@ function CreateUser() {
                 });
             }
         } catch (error) {
+            console.log(error);
             toast.update(id, {
-                render: `Tạo thất bại ${error.message}`,
+                render: `Create failed ${error.message}`,
                 type: 'error',
                 isLoading: false,
                 autoClose: 3000,
@@ -144,7 +151,7 @@ function CreateUser() {
                     <div className="p-6.5">
                         <div className="mb-4.5 flex flex-col gap-24 xl:flex-row">
                             <div className="">
-                                <label className="mb-2.5 block text-black " htmlFor="name">
+                                <label className="mb-2.5 block text-black " htmlFor="username">
                                     Full Name
                                 </label>
                                 <input
@@ -159,7 +166,7 @@ function CreateUser() {
                             </div>
 
                             <div className="">
-                                <label className="mb-2.5 block text-black " htmlFor="totalSeats">
+                                <label className="mb-2.5 block text-black " htmlFor="username">
                                     User Name
                                 </label>
                                 <input
@@ -189,7 +196,7 @@ function CreateUser() {
                                 <span className="text-error text-xs">{errInput.email}</span>
                             </div>
                             <div className="w-40">
-                                <label className="mb-2.5 block text-black " htmlFor="role">
+                                <label className="mb-2.5 block text-black " htmlFor="gender">
                                     Gender
                                 </label>
                                 <SelectGroup
@@ -200,7 +207,7 @@ function CreateUser() {
                                 <span className="text-error text-xs ml-5">{errInput.selectedOptioGender}</span>
                             </div>
                             <div className="">
-                                <label className="mb-2.5 block text-black " htmlFor="busNumber">
+                                <label className="mb-2.5 block text-black " htmlFor="dob">
                                     Birth of year
                                 </label>
                                 <input

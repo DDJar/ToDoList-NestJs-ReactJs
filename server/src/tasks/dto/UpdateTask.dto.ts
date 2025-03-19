@@ -1,4 +1,4 @@
-import { Type } from "class-transformer";
+import { Transform, Type } from "class-transformer";
 import { IsBoolean, IsEmail, IsEnum, IsNotEmpty, IsOptional, IsString, MaxLength, ValidateNested } from "class-validator";
 
 export class UpdateTaskDto {
@@ -11,10 +11,11 @@ export class UpdateTaskDto {
     description?: string;
 
     @IsOptional()
-    @IsEnum(['todo', 'doing', 'done'])
-    status?: 'todo' | 'doing' | 'done';
+    @IsEnum(['Todo', 'Doing', 'Done'])
+    status?: 'Todo' | 'Doing' | 'Done';
 
     @IsOptional()
     @IsString()
-    assignee?: string;
+    @Transform(({ value }) => (value === '' ? null : value))
+    assignee?: string | null;
 }

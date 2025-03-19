@@ -3,7 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { Delete01Icon, PencilEdit02Icon } from 'hugeicons-react';
 import Button from '~/components/Button';
 import axios from '~/config/configAxios';
-import { _getUsers, deleteUsers, searchUsers, updateUsers } from '~/api/user';
+import { _getUsers, _deleteUsers, _searchUsers, _updateUsers } from '~/api/user';
 import { toast } from 'react-toastify';
 
 import useDebounce from '~/utils/useDebounce';
@@ -66,7 +66,7 @@ const UserPage = () => {
                 setCurrentPage(tab);
             }
         } catch (error) {
-            toast.error(`Hiển thị thất bại`, {
+            toast.error(`Display failed`, {
                 render: `${error.message}`,
                 isLoading: false,
                 autoClose: 3000,
@@ -82,8 +82,8 @@ const UserPage = () => {
         };
         try {
             const res = await axios({
-                method: searchUsers.method,
-                url: searchUsers.url,
+                method: _searchUsers.method,
+                url: _searchUsers.url,
                 params: data,
                 withCredentials: true,
             });
@@ -97,7 +97,7 @@ const UserPage = () => {
                 }
             }
         } catch (error) {
-            toast.error(`Hiển thị thất bại`, {
+            toast.error(`Display failed`, {
                 render: `${error.message}`,
                 isLoading: false,
                 autoClose: 3000,
@@ -132,7 +132,7 @@ const UserPage = () => {
                     ...errors,
                     email:
                         (value ? '' : 'Email cannot be empty!') ||
-                        (validation(value) || searchUsers.email ? '' : 'Invalid email!'),
+                        (validation(value) || _searchUsers.email ? '' : 'Invalid email!'),
                 });
                 break;
 
@@ -166,8 +166,6 @@ const UserPage = () => {
     const handleShowAlert = async () => {
         const hasErrors = Object.values(errors).some((error) => error !== '');
         const isMissingDetail = !selectedUser.full_name || !selectedUser.email || !selectedUser.dob;
-        console.log(selectedUser);
-
         if (hasErrors || isMissingDetail) {
             toast.warning('Please fill in all information.');
             return;
@@ -180,11 +178,9 @@ const UserPage = () => {
                 gender: selectedGender,
                 dob: selectedUser.dob,
             };
-            console.log(data);
-
             const res = await axios({
-                method: updateUsers.method,
-                url: `${updateUsers.url}${selectedUser._id}`,
+                method: _updateUsers.method,
+                url: `${_updateUsers.url}${selectedUser._id}`,
                 data: data,
                 withCredentials: true,
             });
@@ -201,7 +197,7 @@ const UserPage = () => {
                 toast.warning('Email already exists');
             }
         } catch (error) {
-            toast.error(`Delete false`, {
+            toast.error(`Update failed`, {
                 render: `${error.message}`,
                 isLoading: false,
                 autoClose: 3000,
@@ -212,11 +208,10 @@ const UserPage = () => {
     const handleShowDeleteAlert = async () => {
         try {
             const res = await axios({
-                method: deleteUsers.method,
-                url: `${deleteUsers.url}${selectedDeleteUser._id}`,
+                method: _deleteUsers.method,
+                url: `${_deleteUsers.url}${selectedDeleteUser._id}`,
                 withCredentials: true,
             });
-            console.log(res);
 
             if (res.data.status === 200) {
                 setCurrentPage(tab);
@@ -230,7 +225,7 @@ const UserPage = () => {
                 toast.warning('User still has tasks');
             }
         } catch (error) {
-            toast.error(`Delete false`, {
+            toast.error(`Delete failed`, {
                 render: `${error.message}`,
                 isLoading: false,
                 autoClose: 3000,
@@ -278,7 +273,7 @@ const UserPage = () => {
                                     type="text"
                                     id="table-search"
                                     className="block p-2 ps-10 text-sm text-gray-900 border border-gray-300 rounded-lg w-80 bg-gray-50 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
-                                    placeholder="Enter box search..."
+                                    placeholder="Enter full-name or email to search..."
                                     value={searchTerm}
                                     onChange={(e) => setSearchTerm(e.target.value)}
                                 />
@@ -356,6 +351,7 @@ const UserPage = () => {
                                                             className="mr-3"
                                                             icon={
                                                                 <Delete01Icon
+                                                                    disabled
                                                                     size={24}
                                                                     color="#9b9b9b"
                                                                     variant="stroke"
@@ -373,14 +369,15 @@ const UserPage = () => {
                         </tbody>
                     </table>
                     <div className="justify-center flex mb-4">
-                        <div className="flex justify-between mt-4 w-122 items-center">
+                        <div className="flex justify-between mt-4 w-100 items-center">
                             <Button
                                 primary
+                                className={'w-30'}
                                 onClick={() => handlePageChange(currentPage - 1)}
                                 disable={currentPage === 1}
                                 roundedMd
                             >
-                                Previous page
+                                Previous
                             </Button>
                             <span>Page {currentPage}</span>
                             <Button
@@ -389,7 +386,7 @@ const UserPage = () => {
                                 disable={currentPage === totalPages || users.length < 3}
                                 roundedMd
                             >
-                                Next page
+                                Next
                             </Button>
                         </div>
                     </div>

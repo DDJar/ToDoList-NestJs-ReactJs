@@ -21,7 +21,13 @@ export class TaskController {
     @Get(':id')
     async getTaskById(@Param('id') id: string) {
         const isValidId = mongoose.Types.ObjectId.isValid(id);
-        if (!isValidId) throw new HttpException("Invalid ID", 400);
+        if (!isValidId) {
+            return {
+                status: 400,
+                message: "Invalid ID",
+
+            };
+        }
         const findTask = await this.tasksService.findTaskById(id);
         if (!findTask) throw new HttpException("Task Not Found", 404);
         return findTask;
@@ -30,18 +36,28 @@ export class TaskController {
     @UsePipes(new ValidationPipe())
     async updateTask(@Param('id') id: string, @Body() updateTaskDto: UpdateTaskDto,) {
         const isValidId = mongoose.Types.ObjectId.isValid(id);
-        if (!isValidId) throw new HttpException("Invalid ID", 400);
+        if (!isValidId) {
+            return {
+                status: 400,
+                message: "Invalid ID",
+
+            };
+        }
         const updateTask = await this.tasksService.updateTask(id, updateTaskDto);
-        if (!updateTask) throw new HttpException("Task Not Found", 404);
         return updateTask;
     }
 
     @Delete(':id')
     async deleteTask(@Param('id') id: string) {
         const isValidId = mongoose.Types.ObjectId.isValid(id);
-        if (!isValidId) throw new HttpException("Invalid ID", 400);
+        if (!isValidId) {
+            return {
+                status: 400,
+                message: "Invalid ID",
+
+            };
+        }
         const deleteTask = await this.tasksService.deleteTask(id);
-        if (!deleteTask) throw new HttpException("Task Not Found", 404);
         return deleteTask
     }
 }

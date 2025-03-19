@@ -3,20 +3,24 @@ export const _getUsers = {
     url: `${SERVER_URL}/users/`,
     method: 'GET',
 };
-export const createUser = {
+export const _getAllUsers = {
+    url: `${SERVER_URL}/users/view-all`,
+    method: 'GET',
+};
+export const _createUser = {
     url: `${SERVER_URL}/users/`,
     method: 'POST',
 };
-export const searchUsers = {
+export const _searchUsers = {
     url: `${SERVER_URL}/users/search`,
     method: 'GET',
 };
-export const updateUsers = {
+export const _updateUsers = {
     url: `${SERVER_URL}/users/`,
     method: 'PATCH',
 };
 
-export const deleteUsers = {
+export const _deleteUsers = {
     url: `${SERVER_URL}/users/`,
     method: 'DELETE',
 };

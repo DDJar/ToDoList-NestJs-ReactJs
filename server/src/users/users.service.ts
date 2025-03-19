@@ -11,8 +11,36 @@ export class UsersService {
     constructor(@InjectModel(User.name) private userModel: Model<User>,
         @InjectModel(Task.name) private taskModel: Model<Task>) { }
     async createUser(createUserDto: CreateUserDto) {
-        const newUser = new this.userModel(createUserDto);
-        return newUser.save();
+        try {
+            const { email, username } = createUserDto;
+            const existingUser = await this.userModel.findOne({
+                $or: [{ email }, { username }],
+            });
+            if (existingUser) {
+                return {
+                    status: 400,
+                    message: existingUser.email === email
+                        ? "Email already exists in the system"
+                        : "Username already exists in the system",
+                };
+            }
+
+            const newUser = new this.userModel(createUserDto);
+            newUser.save();
+            return {
+                status: 200,
+                message: "User created successfull",
+            };
+        } catch (error) {
+            console.error("Error creating users:", error);
+            return {
+                status: 500,
+                message: "Internal Server Error",
+                error: error.message,
+            };
+        }
+
+
     }
     async getsUsers(page: number, limit = 5) {
         try {
@@ -38,6 +66,28 @@ export class UsersService {
                     users: usersWithTasks,
                     totalPages: totalPages,
                     currentPage: page,
+                },
+            };
+        } catch (error) {
+            console.error("Error fetching users:", error);
+            return {
+                status: 500,
+                message: "Internal Server Error",
+                error: error.message,
+            };
+        }
+    }
+    async getsAllUsers() {
+        try {
+
+            const listUsers = await this.userModel
+                .find()
+                .lean();
+            return {
+                status: 200,
+                message: "Users fetched successfully",
+                data: {
+                    users: listUsers,
                 },
             };
         } catch (error) {
@@ -110,13 +160,13 @@ export class UsersService {
             const result = await this.userModel.findByIdAndUpdate(id, updateUserDto, { new: true });
             return {
                 status: 200,
-                message: "Users fetched successfully",
+                message: "Users update successfully",
                 data: {
                     users: result
                 },
             };
         } catch (error) {
-            console.error("Error fetching users:", error);
+            console.error("Error updating users:", error);
             return {
                 status: 500,
                 message: "Internal Server Error",
