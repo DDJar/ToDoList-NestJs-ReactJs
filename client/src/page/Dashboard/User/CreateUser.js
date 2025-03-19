@@ -144,7 +144,7 @@ function CreateUser() {
     return (
         <div className="">
             <div className="flex space-x-4 mb-4">
-                <h1>Tạo xe đưa đón</h1>
+                <h1>Create user</h1>
             </div>
             <div className="rounded-sm border border-stroke bg-white shadow-default">
                 <form action="#" onSubmit={handleSubmit}>
